@@ -1,3 +1,4 @@
+import { BLE_DATA_TYPE } from "@/constants/theme";
 import { navigate } from "@/utils/NavigationService";
 import { decode as atob, encode as btoa } from "base-64";
 import { PermissionsAndroid, Platform } from "react-native";
@@ -21,6 +22,16 @@ export type ReceivedMessage = {
   data: string;
   timestamp: Date;
 };
+
+export interface BlePayload<T = unknown> {
+  type: BLE_DATA_TYPE;
+  message: T;
+}
+
+export interface BleMessage<T = unknown> {
+  timestamp: number;
+  data: BlePayload<T>;
+}
 
 type BluetoothState = {
   // ── State ──
@@ -48,7 +59,7 @@ type BluetoothState = {
   stopScan: () => Promise<void>;
   connectToDevice: (device: Device) => Promise<void>;
   disconnectDevice: () => Promise<void>;
-  sendData: (data: string) => Promise<void>;
+  sendPayload: (payload: BlePayload) => Promise<void>;
   clearMessages: () => void;
   clearError: () => void;
 
@@ -364,19 +375,26 @@ export const useBluetoothStore = create<BluetoothState>((set, get) => ({
     });
   },
 
-  // ── sendData ─────────────────────────────────────────────────────────────
-  sendData: async (data) => {
+  // ── sendPayload ──────────────────────────────────────────────────────────
+  sendPayload: async (payload: BlePayload) => {
     const { connectedDevice, _writeServiceUUID, _writeCharUUID } = get();
+
     if (!connectedDevice || !_writeServiceUUID || !_writeCharUUID) {
       set({ error: "No device connected or no writable characteristic." });
       return;
     }
+
     try {
+      const message: BleMessage = {
+        timestamp: Date.now(),
+        data: payload,
+      };
+
       await manager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
         _writeServiceUUID,
         _writeCharUUID,
-        btoa(data),
+        btoa(JSON.stringify(message)),
       );
     } catch (err: any) {
       set({ error: err.message ?? "Failed to send data" });

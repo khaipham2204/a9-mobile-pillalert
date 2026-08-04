@@ -5,6 +5,7 @@ import { TimePickerModal } from "@/components/home/TimePickerModal";
 import { setupNotificationHandler } from "@/components/home/helpers";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { BLE_DATA_TYPE } from "@/constants/theme";
 import { useBluetoothStore } from "@/store/bluetoothStore";
 import { useHomeStore } from "@/store/homeStore";
 import type { RootStackParamList, TabParamList } from "@/types/navigation";
@@ -30,7 +31,8 @@ export default function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, "Home">>();
-  const { connectedDevice, disconnectDevice, sendData } = useBluetoothStore();
+  const { connectedDevice, disconnectDevice, sendPayload } =
+    useBluetoothStore();
 
   const {
     data,
@@ -66,6 +68,14 @@ export default function HomeScreen() {
     );
     return () => sub.remove();
   }, [setDoseAlertIndex]);
+
+  useEffect(() => {
+    const result = times
+      .map((time, index) => `H${index + 1} = ${time}`)
+      .join("\n");
+    sendPayload({ type: BLE_DATA_TYPE.DATA, message: result });
+    console.log(result);
+  }, [times, sendPayload]);
 
   // ── In-app clock (stable ref to avoid interval recreation) ─────────────
 
@@ -110,7 +120,6 @@ export default function HomeScreen() {
           onConnect={() => navigation.navigate("BleDevices")}
           onDisconnect={() => disconnectDevice()}
         />
-
         {/* Drug Table */}
         <DrugTable
           data={data}
@@ -121,7 +130,6 @@ export default function HomeScreen() {
           onHeaderPress={handleHeaderPress}
           onLabelPress={handleLabelPress}
         />
-
         {/* Action Buttons */}
         <View className="mt-4 flex-row gap-4">
           {!editing ? (
@@ -145,20 +153,6 @@ export default function HomeScreen() {
               </ButtonText>
             </Button>
           )}
-        </View>
-
-        {/* Send Test String via Bluetooth */}
-        <View className="mt-4">
-          <Button
-            size="lg"
-            onPress={() => sendData("string test")}
-            disabled={!connectedDevice}
-            className={`rounded-none h-14 ${connectedDevice ? "bg-blue-600" : "bg-gray-500"}`}
-          >
-            <ButtonText className="font-bold text-white text-base tracking-wide">
-              📡 SEND TEST
-            </ButtonText>
-          </Button>
         </View>
       </View>
 
