@@ -5,7 +5,6 @@ import { TimePickerModal } from "@/components/home/TimePickerModal";
 import { setupNotificationHandler } from "@/components/home/helpers";
 import { Button, ButtonText } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { BLE_DATA_TYPE } from "@/constants/theme";
 import { useBluetoothStore } from "@/store/bluetoothStore";
 import { useHomeStore } from "@/store/homeStore";
 import type { RootStackParamList, TabParamList } from "@/types/navigation";
@@ -68,14 +67,6 @@ export default function HomeScreen() {
     );
     return () => sub.remove();
   }, [setDoseAlertIndex]);
-
-  useEffect(() => {
-    const result = times
-      .map((time, index) => `H${index + 1} = ${time}`)
-      .join("\n");
-    sendPayload({ type: BLE_DATA_TYPE.DATA, message: result });
-    console.log(result);
-  }, [times, sendPayload]);
 
   // ── In-app clock (stable ref to avoid interval recreation) ─────────────
 

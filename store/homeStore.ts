@@ -18,6 +18,8 @@ import {
   type Drug,
   type TimeSlotKey,
 } from "@/components/home/types";
+import { BLE_DATA_TYPE, BLE_EVENT_TYPE } from "@/constants/theme";
+import { useBluetoothStore } from "@/store/bluetoothStore";
 import { storage } from "@/store/storage";
 import { format } from "date-fns";
 import * as Speech from "expo-speech";
@@ -43,7 +45,7 @@ type HomeState = {
   // ── Actions ──
   setEditing: (editing: boolean) => void;
   increment: (index: number, field: TimeSlotKey) => void;
-  handleSave: () => void;
+  handleSave: () => Promise<void>;
   handleHeaderPress: (i: number) => void;
   setPreviewUri: (uri: string | null) => void;
   setEditingTimeIndex: (index: number | null) => void;
@@ -90,11 +92,30 @@ export const useHomeStore = create<HomeState>()(
         ),
       })),
 
-    handleSave: () => {
-      const { data } = get();
-      set({ savedData: data, editing: false });
-    },
+    handleSave: async () => {
+      const { data, times } = get();
 
+      set({
+        savedData: data,
+        editing: false,
+      });
+
+      const { connectedDevice, sendPayload } = useBluetoothStore.getState();
+
+      if (!connectedDevice) {
+        console.warn("Không có thiết bị Bluetooth đang kết nối.");
+        return;
+      }
+
+      await sendPayload({
+        type: BLE_DATA_TYPE.EVENT,
+        message: {
+          name: BLE_EVENT_TYPE.SETTING_ALARM_TIME,
+          time: times,
+          timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
+        },
+      });
+    },
     handleHeaderPress: (i) => {
       const { editing } = get();
       if (!editing) return;

@@ -1,4 +1,4 @@
-import { BLE_DATA_TYPE } from "@/constants/theme";
+import { BLE_DATA_TYPE, BLE_EVENT_TYPE } from "@/constants/theme";
 import { navigate } from "@/utils/NavigationService";
 import { decode as atob, encode as btoa } from "base-64";
 import { PermissionsAndroid, Platform } from "react-native";
@@ -297,6 +297,18 @@ export const useBluetoothStore = create<BluetoothState>((set, get) => ({
         _notifyServiceUUID: notifyServiceUUID,
         _notifyCharUUID: notifyUUID,
       });
+
+      if (writeServiceUUID && writeUUID) {
+        const now = Date.now();
+        await get().sendPayload({
+          type: BLE_DATA_TYPE.EVENT,
+          message: {
+            name: BLE_EVENT_TYPE.SETTING_TIME,
+            time: now,
+            timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
+          },
+        });
+      }
 
       // Subscribe to incoming data if a notifiable characteristic was found
       if (notifyServiceUUID && notifyUUID) {

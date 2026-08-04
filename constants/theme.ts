@@ -49,3 +49,8 @@ export enum BLE_DATA_TYPE {
   EVENT = "event",
   DATA = "data",
 }
+
+export enum BLE_EVENT_TYPE {
+  SETTING_TIME = "SETTING_TIME",
+  SETTING_ALARM_TIME = "SETTING_ALARM_TIME",
+}
