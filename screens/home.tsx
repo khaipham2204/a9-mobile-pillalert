@@ -1,5 +1,6 @@
 import { BluetoothBanner } from "@/components/home/BluetoothBanner";
 import { DoseAlertModal } from "@/components/home/DoseAlertModal";
+import { DoseHistory } from "@/components/home/DoseHistory";
 import { DrugTable } from "@/components/home/DrugTable";
 import { TimePickerModal } from "@/components/home/TimePickerModal";
 import { setupNotificationHandler } from "@/components/home/helpers";
@@ -30,8 +31,7 @@ export default function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<TabParamList, "Home">>();
-  const { connectedDevice, disconnectDevice, sendPayload } =
-    useBluetoothStore();
+  const { connectedDevice, disconnectDevice } = useBluetoothStore();
 
   const {
     data,
@@ -53,6 +53,8 @@ export default function HomeScreen() {
     setPhoto,
     handleDoseConfirm,
     checkDoseAlerts,
+    history,
+    clearHistory,
   } = useHomeStore();
 
   // ── Notification response listener ────────────────────────────────────────
@@ -145,6 +147,7 @@ export default function HomeScreen() {
             </Button>
           )}
         </View>
+        <DoseHistory history={history} onClear={clearHistory} />
       </View>
 
       {/* Image Preview Modal */}
