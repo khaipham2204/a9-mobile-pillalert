@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text";
 import { Modal, Pressable, View } from "react-native";
+import { minutesOfDay, timeToMinutes } from "./helpers";
 import type { Drug, TimeSlotKey } from "./types";
 import { TIME_FIELDS, TIME_ICONS, TIME_LABELS } from "./types";
 
@@ -7,19 +8,26 @@ type DoseAlertModalProps = {
   visible: boolean;
   slotIndex: number | null;
   data: Drug[];
+  /** Scheduled "HH:mm" for this slot — used to show how late the dose is. */
+  scheduledTime?: string;
   onConfirm: (
     slotKey: TimeSlotKey,
     drugs: { name: string; qty: number }[],
   ) => void;
-  onDismiss: () => void;
+  /** "Skip" — answers the slot for today, no history entry. */
+  onSkip: () => void;
+  /** Tap-outside / back — hides the modal but keeps the slot unanswered. */
+  onSnooze: () => void;
 };
 
 export function DoseAlertModal({
   visible,
   slotIndex,
   data,
+  scheduledTime,
   onConfirm,
-  onDismiss,
+  onSkip,
+  onSnooze,
 }: DoseAlertModalProps) {
   if (slotIndex === null) return null;
 
@@ -28,15 +36,18 @@ export function DoseAlertModal({
     .filter((d) => d[slotKey] > 0)
     .map((d) => ({ name: d.name, qty: d[slotKey] }));
 
+  const scheduledMin = scheduledTime ? timeToMinutes(scheduledTime) : null;
+  const lateBy = scheduledMin === null ? 0 : minutesOfDay() - scheduledMin;
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onDismiss}
+      onRequestClose={onSnooze}
     >
       <Pressable
-        onPress={onDismiss}
+        onPress={onSnooze}
         className="flex-1 bg-black/80 items-center justify-center px-6"
       >
         <Pressable onPress={(e) => e.stopPropagation()}>
@@ -49,7 +60,13 @@ export function DoseAlertModal({
               </Text>
               <Text className="text-slate-400 text-xs text-center mt-1">
                 {TIME_LABELS[slotIndex]}
+                {scheduledTime ? ` — ${scheduledTime}` : ""}
               </Text>
+              {lateBy >= 2 && (
+                <Text className="text-amber-400 text-xs text-center mt-1">
+                  ⏰ {lateBy} min late
+                </Text>
+              )}
             </View>
 
             {/* Drug list */}
@@ -80,7 +97,7 @@ export function DoseAlertModal({
             {/* Buttons */}
             <View className="flex-row gap-3">
               <Pressable
-                onPress={onDismiss}
+                onPress={onSkip}
                 className="flex-1 bg-gray-600 active:bg-gray-700 rounded-none py-3 items-center border border-gray-800"
               >
                 <Text className="text-gray-200 font-bold text-sm">Skip</Text>

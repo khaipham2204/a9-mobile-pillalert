@@ -6,9 +6,11 @@ import {
   DEFAULT_TIMES,
   type DoseRecord,
   type Drug,
+  type SlotDayState,
   STORAGE_KEY_DATA,
   STORAGE_KEY_HISTORY,
   STORAGE_KEY_PHOTOS,
+  STORAGE_KEY_SLOT_STATE,
   STORAGE_KEY_TIME,
   TIME_FIELDS,
   TIME_ICONS,
@@ -68,11 +70,37 @@ export const loadHistory = (): DoseRecord[] => {
   return [];
 };
 
+export const loadSlotState = (): SlotDayState => {
+  const today = todayKey();
+  try {
+    const json = storage.getString(STORAGE_KEY_SLOT_STATE);
+    if (json) {
+      const parsed = JSON.parse(json) as SlotDayState;
+      // Yesterday's answers must not silence today's alerts.
+      if (parsed?.date === today && parsed.resolved) return parsed;
+    }
+  } catch {}
+  return { date: today, resolved: {} };
+};
+
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
 export const parseTime = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return { h, m };
+};
+
+export const todayKey = () => format(new Date(), "yyyy-MM-dd");
+
+/** Minutes elapsed since midnight — the unit the dose window is compared in. */
+export const minutesOfDay = (d: Date = new Date()) =>
+  d.getHours() * 60 + d.getMinutes();
+
+/** "HH:mm" → minutes since midnight, or null when the stored value is junk. */
+export const timeToMinutes = (t: string): number | null => {
+  const { h, m } = parseTime(t);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
 };
 
 export const formatTime = (h: number, m: number) =>
@@ -126,11 +154,25 @@ export async function requestNotificationPermission() {
   return status === "granted";
 }
 
+/**
+ * Request permission (if needed) and re-arm the daily OS notifications.
+ * Safe to call on every app start — it cancels before scheduling.
+ */
+export async function syncSlotNotifications(times: string[]) {
+  const granted = await requestNotificationPermission();
+  if (!granted) return false;
+  await scheduleSlotNotifications(times);
+  return true;
+}
+
 export async function scheduleSlotNotifications(times: string[]) {
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   for (let i = 0; i < times.length; i++) {
-    const { h, m } = parseTime(times[i]);
+    const minutes = timeToMinutes(times[i]);
+    if (minutes === null) continue;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `${TIME_ICONS[i]} Time to take your medication!`,

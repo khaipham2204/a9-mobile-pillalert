@@ -15,6 +15,15 @@ export type DoseRecord = {
   drugs: { name: string; qty: number }[];
 };
 
+/** How the user answered a slot for a given day. */
+export type SlotResolution = "taken" | "skipped";
+
+/** Per-day answer sheet — persisted so a restart can't re-ask an answered slot. */
+export type SlotDayState = {
+  date: string; // yyyy-MM-dd
+  resolved: Record<string, SlotResolution>; // keyed by slot index as string
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const TIME_LABELS = ["MORNING", "NOON", "EVENING"] as const;
@@ -26,3 +35,13 @@ export const STORAGE_KEY_DATA = "home:drugData";
 export const STORAGE_KEY_PHOTOS = "home:photos";
 export const STORAGE_KEY_TIME = "home:time";
 export const STORAGE_KEY_HISTORY = "home:doseHistory";
+export const STORAGE_KEY_SLOT_STATE = "home:slotState";
+
+/** How long after a scheduled time the modal can still be raised (catch-up). */
+export const DOSE_CATCH_UP_MINUTES = 180;
+
+/** How long a dismissed-but-unanswered alert stays quiet before re-appearing. */
+export const DOSE_SNOOZE_MINUTES = 5;
+
+/** In-app clock tick interval. */
+export const DOSE_CHECK_INTERVAL_MS = 30_000;
