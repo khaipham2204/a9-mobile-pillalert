@@ -110,24 +110,24 @@ export const useHomeStore = create<HomeState>()(
 
     handleSave: async () => {
       const { data, times } = get();
+      console.log("Saving data:", data);
 
       set({
         savedData: data,
         editing: false,
       });
-
       const { connectedDevice, sendPayload } = useBluetoothStore.getState();
 
       if (!connectedDevice) {
         console.warn("Không có thiết bị Bluetooth đang kết nối.");
         return;
       }
-
       await sendPayload({
         type: BLE_DATA_TYPE.EVENT,
         message: {
           name: BLE_EVENT_TYPE.SETTING_ALARM_TIME,
           time: times,
+          drugslot: data,
           timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
         },
       });

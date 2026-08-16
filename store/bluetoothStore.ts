@@ -390,7 +390,6 @@ export const useBluetoothStore = create<BluetoothState>((set, get) => ({
   // ── sendPayload ──────────────────────────────────────────────────────────
   sendPayload: async (payload: BlePayload) => {
     const { connectedDevice, _writeServiceUUID, _writeCharUUID } = get();
-
     if (!connectedDevice || !_writeServiceUUID || !_writeCharUUID) {
       set({ error: "No device connected or no writable characteristic." });
       return;
