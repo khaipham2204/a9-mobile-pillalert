@@ -52,6 +52,7 @@ export default function HomeScreen() {
     doseAlertIndex,
     setEditing,
     increment,
+    decrement,
     handleSave,
     handleHeaderPress,
     setPreviewUri,
@@ -95,7 +96,8 @@ export default function HomeScreen() {
     const sub = Notifications.addNotificationReceivedListener(
       (notification) => {
         const slotIndex = notification.request.content.data?.slotIndex as
-          number | undefined;
+          | number
+          | undefined;
         if (slotIndex !== undefined) openDoseAlert(slotIndex);
       },
     );
@@ -175,6 +177,7 @@ export default function HomeScreen() {
             photos={photos}
             times={times}
             onIncrement={increment}
+            onDecrement={decrement}
             onHeaderPress={handleHeaderPress}
             onLabelPress={handleLabelPress}
           />

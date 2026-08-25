@@ -7,7 +7,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
-import { Pressable, View } from "react-native";
+import { useState } from "react";
+import { Modal, Pressable, View } from "react-native";
 import type { Drug, TimeSlotKey } from "./types";
 import { TIME_FIELDS, TIME_LABELS } from "./types";
 
@@ -17,6 +18,7 @@ type DrugTableProps = {
   photos: Record<string, string>;
   times: string[];
   onIncrement: (index: number, field: TimeSlotKey) => void;
+  onDecrement: (index: number, field: TimeSlotKey) => void;
   onHeaderPress: (i: number) => void;
   onLabelPress: (label: string) => void;
 };
@@ -27,9 +29,14 @@ export function DrugTable({
   photos,
   times,
   onIncrement,
+  onDecrement,
   onHeaderPress,
   onLabelPress,
 }: DrugTableProps) {
+  const [popup, setPopup] = useState<{
+    index: number;
+    field: TimeSlotKey;
+  } | null>(null);
   return (
     <View className="rounded-none overflow-hidden bg-gray-700 shadow-none border border-gray-700">
       <Table className="w-full table-fixed">
@@ -87,7 +94,7 @@ export function DrugTable({
                   className="px-1 py-2 text-center min-h-[52px]"
                 >
                   <Pressable
-                    onPress={() => editing && onIncrement(index, field)}
+                    onPress={() => editing && setPopup({ index, field })}
                     disabled={!editing}
                     className={`rounded-none w-12 h-12 items-center justify-center `}
                   >
@@ -120,6 +127,59 @@ export function DrugTable({
           </TableRow>
         </TableBody>
       </Table>
+
+      {/* +/- Popup */}
+      <Modal
+        visible={popup !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPopup(null)}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/50"
+          onPress={() => setPopup(null)}
+        >
+          <Pressable
+            className="bg-white rounded-xl p-6 items-center gap-4 min-w-[200px]"
+            onPress={(e) => e.stopPropagation()}
+          >
+            {popup && (
+              <>
+                <Text className="text-lg font-bold text-black">
+                  {data[popup.index]?.name} — {popup.field}
+                </Text>
+                <Text className="text-3xl font-bold text-black">
+                  {data[popup.index]?.[popup.field]}
+                </Text>
+                <View className="flex-row gap-6">
+                  <Pressable
+                    onPress={() => {
+                      onDecrement(popup.index, popup.field);
+                    }}
+                    className="bg-red-500 w-14 h-14 rounded-full items-center justify-center"
+                  >
+                    <Text className="text-white text-2xl font-bold">−</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      onIncrement(popup.index, popup.field);
+                    }}
+                    className="bg-green-500 w-14 h-14 rounded-full items-center justify-center"
+                  >
+                    <Text className="text-white text-2xl font-bold">+</Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={() => setPopup(null)}
+                  className="mt-2 px-6 py-2 bg-gray-300 rounded-lg"
+                >
+                  <Text className="text-black font-bold">Done</Text>
+                </Pressable>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

@@ -52,6 +52,7 @@ type HomeState = {
   // ── Actions ──
   setEditing: (editing: boolean) => void;
   increment: (index: number, field: TimeSlotKey) => void;
+  decrement: (index: number, field: TimeSlotKey) => void;
   handleSave: () => Promise<void>;
   handleHeaderPress: (i: number) => void;
   setPreviewUri: (uri: string | null) => void;
@@ -105,6 +106,15 @@ export const useHomeStore = create<HomeState>()(
       set((state) => ({
         data: state.data.map((item, i) =>
           i === index ? { ...item, [field]: item[field] + 1 } : item,
+        ),
+      })),
+
+    decrement: (index, field) =>
+      set((state) => ({
+        data: state.data.map((item, i) =>
+          i === index
+            ? { ...item, [field]: Math.max(0, item[field] - 1) }
+            : item,
         ),
       })),
 
