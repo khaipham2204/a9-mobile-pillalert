@@ -120,7 +120,6 @@ export const useHomeStore = create<HomeState>()(
 
     handleSave: async () => {
       const { data, times } = get();
-      console.log("Saving data:", data);
 
       set({
         savedData: data,

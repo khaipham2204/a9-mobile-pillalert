@@ -161,9 +161,17 @@ export default function HomeScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <View className="flex-1 bg-gray-400">
+    <View className="flex-1 bg-blue-50">
       <ScrollView className="flex-1">
-        <View className="px-4 pt-14 pb-8">
+        <View className="px-5 pt-14 pb-8">
+          <View className="mb-5">
+            <Text className="text-3xl font-bold text-slate-900">
+              Your medication plan
+            </Text>
+            <Text className="mt-1 text-sm text-slate-500">
+              A simple view of what is coming up today.
+            </Text>
+          </View>
           {/* Bluetooth Banner */}
           <BluetoothBanner
             connectedDevice={connectedDevice}
@@ -182,25 +190,25 @@ export default function HomeScreen() {
             onLabelPress={handleLabelPress}
           />
           {/* Action Buttons */}
-          <View className="mt-4 flex-row gap-4">
+          <View className="mt-5 flex-row gap-3">
             {!editing ? (
               <Button
                 size="lg"
                 onPress={() => setEditing(true)}
-                className="flex-1 bg-black  rounded-none h-14 "
+                className="flex-1 rounded-2xl bg-blue-600 h-14 shadow-sm"
               >
                 <ButtonText className="font-bold text-white text-base tracking-wide">
-                  ✏️ EDIT
+                  ✎ Edit plan
                 </ButtonText>
               </Button>
             ) : (
               <Button
                 size="lg"
                 onPress={handleSave}
-                className="flex-1 bg-green-600  rounded-none h-14 "
+                className="flex-1 rounded-2xl bg-blue-600 h-14 shadow-sm"
               >
                 <ButtonText className="font-bold text-white text-base tracking-wide">
-                  💾 SAVE
+                  ✓ Save changes
                 </ButtonText>
               </Button>
             )}

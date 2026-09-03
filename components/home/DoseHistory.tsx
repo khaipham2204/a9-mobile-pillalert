@@ -24,16 +24,16 @@ export function DoseHistory({ history, onClear }: DoseHistoryProps) {
   };
 
   return (
-    <View className="mt-4 bg-gray-600 rounded-none p-4 border border-gray-800">
+    <View className="mt-5 bg-white rounded-2xl p-4 border border-blue-100 shadow-sm">
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">
+        <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider">
           Dose History
         </Text>
         <Pressable
           onPress={handleClear}
-          className="bg-gray-400 rounded-none px-3 py-1 border border-gray-500"
+          className="bg-blue-50 rounded-lg px-3 py-2 border border-blue-100"
         >
-          <Text className="text-gray-800 text-xs font-bold">🗑 Clear</Text>
+          <Text className="text-blue-700 text-xs font-bold">Clear history</Text>
         </Pressable>
       </View>
 
@@ -46,14 +46,14 @@ export function DoseHistory({ history, onClear }: DoseHistoryProps) {
         return (
           <View
             key={i}
-            className="flex-row items-start py-2 border-b border-gray-700 last:border-0"
+            className="flex-row items-start py-3 border-b border-blue-50 last:border-0"
           >
             <Text className="text-base mr-3 mt-0.5">{TIME_ICONS[slotIdx]}</Text>
             <View className="flex-1">
-              <Text className="text-slate-300 text-xs">
+              <Text className="text-slate-600 text-xs">
                 {dateStr} — {timeStr}
               </Text>
-              <Text className="text-slate-400 text-[11px] mt-0.5">
+              <Text className="text-slate-500 text-[11px] mt-0.5">
                 {record.drugs
                   .map(
                     (d) =>

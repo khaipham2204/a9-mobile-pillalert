@@ -38,14 +38,14 @@ export function DrugTable({
     field: TimeSlotKey;
   } | null>(null);
   return (
-    <View className="rounded-none overflow-hidden bg-gray-700 shadow-none border border-gray-700">
+    <View className="rounded-2xl overflow-hidden bg-white shadow-sm border border-blue-100">
       <Table className="w-full table-fixed">
         <TableHeader className="mb-[0.3rem]">
-          <TableRow className={`border-b-0 bg-gray-500`}>
+          <TableRow className={`border-b-0 bg-blue-800`}>
             <TableHead className="px-3 py-3 text-center min-h-[52px]">
               <View className="w-full h-full">
                 <View className=" p-2 w-full h-full items-center justify-center">
-                  <Text className="text-[12px] font-bold text-black uppercase tracking-wider ">
+                  <Text className="text-[11px] font-bold text-white uppercase tracking-wider ">
                     Medicine
                   </Text>
                 </View>
@@ -62,9 +62,11 @@ export function DrugTable({
                   className="w-full h-full"
                 >
                   <View
-                    className={`${editing ? "bg-yellow-300" : "bg-gray-300"} p-2 w-full h-full items-center justify-center`}
+                    className={`${editing ? "bg-amber-300" : "bg-blue-700"} rounded-lg p-2 w-full h-full items-center justify-center border border-blue-500`}
                   >
-                    <Text className="text-[12px] font-bold uppercase tracking-wider text-blue-700">
+                    <Text
+                      className={`${editing ? "text-amber-950" : "text-white"} text-[11px] font-bold uppercase tracking-wider`}
+                    >
                       {label}
                     </Text>
                   </View>
@@ -76,13 +78,16 @@ export function DrugTable({
 
         <TableBody className="flex-col gap-1">
           {data.map((item, index) => (
-            <TableRow key={index} className="bg-gray-500">
+            <TableRow
+              key={index}
+              className={`${index % 2 === 0 ? "bg-white" : "bg-blue-50/70"} border-t border-blue-100`}
+            >
               <TableData className="px-3 py-2 text-center min-h-[52px]">
                 <Pressable
                   onPress={() => onLabelPress(item.name)}
-                  className="bg-gray-300 rounded-none h-full w-full items-center justify-center border border-gray-400"
+                  className="bg-blue-100 rounded-xl h-full w-full items-center justify-center border border-blue-200"
                 >
-                  <Text className="text-black text-lg font-bold">
+                  <Text className="text-slate-900 text-base font-bold">
                     {item.name}
                   </Text>
                 </Pressable>
@@ -96,9 +101,11 @@ export function DrugTable({
                   <Pressable
                     onPress={() => editing && setPopup({ index, field })}
                     disabled={!editing}
-                    className={`rounded-none w-12 h-12 items-center justify-center `}
+                    className={`rounded-xl w-12 h-12 items-center justify-center border ${item[field] > 0 ? "bg-blue-100 border-blue-200" : "bg-slate-100 border-slate-200"}`}
                   >
-                    <Text className={` text-lg font-bold text-black`}>
+                    <Text
+                      className={`${item[field] > 0 ? "text-blue-900" : "text-slate-500"} text-xl font-extrabold`}
+                    >
                       {item[field]}
                     </Text>
                   </Pressable>
@@ -108,19 +115,19 @@ export function DrugTable({
           ))}
 
           {/* Time Row */}
-          <TableRow className="bg-gray-500 border-b-0 mt-[0.1rem]">
+          <TableRow className="bg-blue-600 border-b-0 mt-[0.1rem]">
             <TableData className="px-3 py-3 min-h-[52px] text-center">
               <View className="flex-1 h-full w-full flex items-center justify-center">
-                <Text className="text-white text-lg font-bold uppercase tracking-wider">
-                  Time 🕛
+                <Text className="text-white text-sm font-bold uppercase tracking-wider">
+                  Time
                 </Text>
               </View>
             </TableData>
 
             {times.map((t, i) => (
               <TableData key={i} className="px-1 py-3 min-h-[52px] text-center">
-                <View className="bg-gray-300 rounded-none px-3 py-1.5 border border-gray-500">
-                  <Text className="text-blue-700 text-lg font-bold">{t}</Text>
+                <View className="bg-white rounded-lg px-2 py-1.5 border border-blue-100">
+                  <Text className="text-blue-700 text-base font-bold">{t}</Text>
                 </View>
               </TableData>
             ))}
@@ -140,7 +147,7 @@ export function DrugTable({
           onPress={() => setPopup(null)}
         >
           <Pressable
-            className="bg-white rounded-xl p-6 items-center gap-4 min-w-[200px]"
+            className="bg-white rounded-2xl p-6 items-center gap-4 min-w-[200px] border border-blue-100 shadow-lg"
             onPress={(e) => e.stopPropagation()}
           >
             {popup && (
@@ -148,7 +155,7 @@ export function DrugTable({
                 <Text className="text-lg font-bold text-black">
                   {data[popup.index]?.name} — {popup.field}
                 </Text>
-                <Text className="text-3xl font-bold text-black">
+                <Text className="text-3xl font-extrabold text-blue-900">
                   {data[popup.index]?.[popup.field]}
                 </Text>
                 <View className="flex-row gap-6">
@@ -156,7 +163,7 @@ export function DrugTable({
                     onPress={() => {
                       onDecrement(popup.index, popup.field);
                     }}
-                    className="bg-red-500 w-14 h-14 rounded-full items-center justify-center"
+                    className="bg-rose-500 w-14 h-14 rounded-full items-center justify-center"
                   >
                     <Text className="text-white text-2xl font-bold">−</Text>
                   </Pressable>
@@ -164,16 +171,16 @@ export function DrugTable({
                     onPress={() => {
                       onIncrement(popup.index, popup.field);
                     }}
-                    className="bg-green-500 w-14 h-14 rounded-full items-center justify-center"
+                    className="bg-blue-600 w-14 h-14 rounded-full items-center justify-center"
                   >
                     <Text className="text-white text-2xl font-bold">+</Text>
                   </Pressable>
                 </View>
                 <Pressable
                   onPress={() => setPopup(null)}
-                  className="mt-2 px-6 py-2 bg-gray-300 rounded-lg"
+                  className="mt-2 px-6 py-2 bg-blue-100 rounded-lg"
                 >
-                  <Text className="text-black font-bold">Done</Text>
+                  <Text className="text-blue-800 font-bold">Done</Text>
                 </Pressable>
               </>
             )}

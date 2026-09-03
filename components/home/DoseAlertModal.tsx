@@ -51,14 +51,14 @@ export function DoseAlertModal({
         className="flex-1 bg-black/80 items-center justify-center px-6"
       >
         <Pressable onPress={(e) => e.stopPropagation()}>
-          <View className="bg-gray-700 rounded-none p-6 w-full max-w-sm border border-gray-900">
+          <View className="bg-white rounded-3xl p-6 w-full max-w-sm border border-blue-100 shadow-lg">
             {/* Header */}
             <View className="items-center mb-4">
               <Text className="text-4xl mb-2">{TIME_ICONS[slotIndex]}</Text>
-              <Text className="text-white font-bold text-lg text-center">
+              <Text className="text-slate-900 font-bold text-lg text-center">
                 Time to take your medication!
               </Text>
-              <Text className="text-slate-400 text-xs text-center mt-1">
+              <Text className="text-slate-500 text-xs text-center mt-1">
                 {TIME_LABELS[slotIndex]}
                 {scheduledTime ? ` — ${scheduledTime}` : ""}
               </Text>
@@ -70,22 +70,22 @@ export function DoseAlertModal({
             </View>
 
             {/* Drug list */}
-            <View className="bg-gray-500 rounded-none p-4 mb-6 border border-gray-800">
+            <View className="bg-blue-50 rounded-2xl p-4 mb-6 border border-blue-100">
               {drugs.length === 0 ? (
-                <Text className="text-slate-400 text-sm text-center">
+                <Text className="text-slate-500 text-sm text-center">
                   No medications scheduled for this time slot.
                 </Text>
               ) : (
                 drugs.map((d, i) => (
                   <View
                     key={i}
-                    className="flex-row items-center justify-between py-2 border-b border-slate-600 last:border-0"
+                    className="flex-row items-center justify-between py-2 border-b border-blue-100 last:border-0"
                   >
-                    <Text className="text-blue-300 font-bold text-sm flex-1">
+                    <Text className="text-blue-800 font-bold text-sm flex-1">
                       {d.name}
                     </Text>
-                    <View className="bg-emerald-500/20 rounded-lg px-3 py-1 ml-3">
-                      <Text className="text-emerald-400 text-sm font-bold">
+                    <View className="bg-blue-600/10 rounded-lg px-3 py-1 ml-3">
+                      <Text className="text-blue-700 text-sm font-bold">
                         {d.qty} {d.qty === 1 ? "tablet" : "tablets"}
                       </Text>
                     </View>
@@ -98,15 +98,15 @@ export function DoseAlertModal({
             <View className="flex-row gap-3">
               <Pressable
                 onPress={onSkip}
-                className="flex-1 bg-gray-600 active:bg-gray-700 rounded-none py-3 items-center border border-gray-800"
+                className="flex-1 bg-slate-100 active:bg-slate-200 rounded-xl py-3 items-center border border-slate-200"
               >
-                <Text className="text-gray-200 font-bold text-sm">Skip</Text>
+                <Text className="text-slate-700 font-bold text-sm">Skip</Text>
               </Pressable>
               <Pressable
                 onPress={() => onConfirm(slotKey, drugs)}
-                className="flex-2 bg-gray-400 active:bg-gray-500 rounded-none py-3 px-6 items-center border border-gray-600"
+                className="flex-2 bg-blue-600 active:bg-blue-700 rounded-xl py-3 px-6 items-center"
               >
-                <Text className="text-gray-900 font-bold text-sm">✓ Taken</Text>
+                <Text className="text-white font-bold text-sm">✓ Taken</Text>
               </Pressable>
             </View>
           </View>

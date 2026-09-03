@@ -17,23 +17,23 @@ export function BluetoothBanner({
   if (!connectedDevice) {
     return (
       <Pressable onPress={onConnect}>
-        <View className="flex-row items-center bg-gray-500 rounded-none px-4 py-4 mb-4 border border-gray-700">
-          <View className="rounded-none mr-4 bg-gray-600 p-1">
+        <View className="flex-row items-center bg-white rounded-2xl px-4 py-4 mb-4 border border-blue-100 shadow-sm">
+          <View className="rounded-xl mr-4 bg-blue-100 p-2">
             <Image
               size="lg"
               source={{
                 uri: require("@/assets/images/bluetooth-solid-icon.png"),
               }}
               alt="Bluetooth"
-              className="tint-white"
+              className="tint-blue-600"
             />
           </View>
           <View className="flex-1">
-            <Text className="text-base text-blue-100 mb-1">
-              Turn On Bluetooth and
+            <Text className="text-sm text-blue-600 mb-1 font-semibold">
+              Stay connected
             </Text>
-            <Text className="text-lg font-bold text-white tracking-wide">
-              PRESS TO CONNECT
+            <Text className="text-base font-bold text-slate-900 tracking-wide">
+              Tap to connect your dispenser
             </Text>
           </View>
         </View>
@@ -43,8 +43,8 @@ export function BluetoothBanner({
 
   return (
     <Pressable onPress={onDisconnect}>
-      <View className="flex-row items-center bg-gray-500 rounded-none px-4 py-4 mb-6 border border-gray-700">
-        <View className="bg-gray-700 rounded-none p-3 mr-4 border border-gray-800">
+      <View className="flex-row items-center bg-blue-600 rounded-2xl px-4 py-4 mb-6 shadow-sm">
+        <View className="bg-blue-500 rounded-xl p-3 mr-4 border border-blue-400">
           <Image
             size="sm"
             source={{
@@ -55,8 +55,8 @@ export function BluetoothBanner({
           />
         </View>
         <View className="flex-1">
-          <Text className="text-base text-blue-100 mb-1">
-            Tap to disconnect
+          <Text className="text-sm text-blue-100 mb-1 font-semibold">
+            Connected and ready
           </Text>
           <Text className="text-lg font-bold text-white tracking-wide">
             {connectedDevice.localName ?? connectedDevice.name}

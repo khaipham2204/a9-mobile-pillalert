@@ -43,11 +43,11 @@ export function TimePickerModal({
         className="flex-1 bg-black/80 items-center justify-center px-6"
       >
         <Pressable onPress={(e) => e.stopPropagation()}>
-          <View className="bg-gray-700 rounded-none p-6 w-72 border border-gray-900">
-            <Text className="text-white font-bold text-base text-center mb-1">
+          <View className="bg-white rounded-3xl p-6 w-72 border border-blue-100 shadow-lg">
+            <Text className="text-slate-900 font-bold text-base text-center mb-1">
               {TIME_ICONS[index]} {TIME_LABELS[index]}
             </Text>
-            <Text className="text-slate-400 text-xs text-center mb-6">
+            <Text className="text-slate-500 text-xs text-center mb-6">
               Set medication time
             </Text>
 
@@ -57,7 +57,7 @@ export function TimePickerModal({
                 onUp={() => adjust("h", 1)}
                 onDown={() => adjust("h", -1)}
               />
-              <Text className="text-white text-3xl font-bold mb-4">:</Text>
+              <Text className="text-blue-700 text-3xl font-bold mb-4">:</Text>
               <SpinnerColumn
                 value={m}
                 onUp={() => adjust("m", 1)}
@@ -67,9 +67,9 @@ export function TimePickerModal({
 
             <Pressable
               onPress={onClose}
-              className="mt-6 bg-gray-400 active:bg-gray-500 rounded-none py-3 items-center border border-gray-600"
+              className="mt-6 bg-blue-600 active:bg-blue-700 rounded-xl py-3 items-center"
             >
-              <Text className="text-gray-900 font-bold">Confirm</Text>
+              <Text className="text-white font-bold">Confirm</Text>
             </Pressable>
           </View>
         </Pressable>
