@@ -33,7 +33,7 @@ export function BluetoothBanner({
               Stay connected
             </Text>
             <Text className="text-base font-bold text-slate-900 tracking-wide">
-              Tap to connect your dispenser
+              Tap to connect your device
             </Text>
           </View>
         </View>

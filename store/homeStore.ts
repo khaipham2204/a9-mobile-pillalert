@@ -5,7 +5,6 @@ import {
   loadSlotState,
   loadTimes,
   minutesOfDay,
-  nowAsTimeString,
   speakDoseReminder,
   syncSlotNotifications,
   timeToMinutes,
@@ -144,8 +143,7 @@ export const useHomeStore = create<HomeState>()(
     handleHeaderPress: (i) => {
       const { editing } = get();
       if (!editing) return;
-      set((state) => ({
-        times: state.times.map((t, idx) => (idx === i ? nowAsTimeString() : t)),
+      set(() => ({
         editingTimeIndex: i,
       }));
     },

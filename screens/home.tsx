@@ -195,9 +195,9 @@ export default function HomeScreen() {
               <Button
                 size="lg"
                 onPress={() => setEditing(true)}
-                className="flex-1 rounded-2xl bg-blue-600 h-14 shadow-sm"
+                className="flex-1 h-14 rounded-2xl bg-blue-600 shadow-sm data-[active=true]:bg-blue-500 data-[active=true]:text-white"
               >
-                <ButtonText className="font-bold text-white text-base tracking-wide">
+                <ButtonText className="font-bold text-white text-base  tracking-wide data-[active=true]:text-white">
                   ✎ Edit plan
                 </ButtonText>
               </Button>
@@ -205,9 +205,9 @@ export default function HomeScreen() {
               <Button
                 size="lg"
                 onPress={handleSave}
-                className="flex-1 rounded-2xl bg-blue-600 h-14 shadow-sm"
+                className={`flex-1 rounded-2xl bg-amber-300 h-14 shadow-sm active:bg-blue-500 text-black  data-[active=true]:bg-amber-200 data-[active=true]:text-white`}
               >
-                <ButtonText className="font-bold text-white text-base tracking-wide">
+                <ButtonText className="font-bold text-black text-base tracking-wide data-[active=true]:text-white">
                   ✓ Save changes
                 </ButtonText>
               </Button>

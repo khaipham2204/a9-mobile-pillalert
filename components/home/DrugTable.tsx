@@ -126,9 +126,19 @@ export function DrugTable({
 
             {times.map((t, i) => (
               <TableData key={i} className="px-1 py-3 min-h-[52px] text-center">
-                <View className="bg-white rounded-lg px-2 py-1.5 border border-blue-100">
-                  <Text className="text-blue-700 text-base font-bold">{t}</Text>
-                </View>
+                <Pressable
+                  onPress={() => onHeaderPress(i)}
+                  hitSlop={8}
+                  className=""
+                >
+                  <View
+                    className={`${editing ? "bg-amber-300" : "bg-white"} rounded-lg p-2 w-full h-full items-center justify-center border border-blue-100`}
+                  >
+                    <Text className="text-blue-700 text-base font-bold">
+                      {t}
+                    </Text>
+                  </View>
+                </Pressable>
               </TableData>
             ))}
           </TableRow>
