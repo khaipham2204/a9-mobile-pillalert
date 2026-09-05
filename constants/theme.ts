@@ -54,3 +54,5 @@ export enum BLE_EVENT_TYPE {
   SETTING_TIME = "SETTING_TIME",
   SETTING_ALARM_TIME = "SETTING_ALARM_TIME",
 }
+
+export const DISCLAIMER_KEY = "disclaimer_agreed";

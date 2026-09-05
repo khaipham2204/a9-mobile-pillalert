@@ -11,15 +11,17 @@ import { GluestackUIProvider } from "./components/ui/gluestack-ui-provider";
 import "./global.css";
 import { useColorScheme } from "./hooks/use-color-scheme";
 
+import { useEffect, useState } from "react";
 import { HapticTab } from "./components/haptic-tab";
 import { IconSymbol } from "./components/ui/icon-symbol";
-import { Colors } from "./constants/theme";
+import { Colors, DISCLAIMER_KEY } from "./constants/theme";
 import BleDevicesScreen from "./screens/ble-devices";
 import CameraScreen from "./screens/camera";
 import HomeScreen from "./screens/home";
 
-import { useEffect } from "react";
+import { DisclaimerModal } from "./components/home/DisclamerModel";
 import { useBluetoothStore } from "./store/bluetoothStore";
+import { storage } from "./store/storage";
 import { RootStackParamList, TabParamList } from "./types/navigation";
 import { navigationRef } from "./utils/NavigationService";
 
@@ -55,7 +57,13 @@ function TabNavigator() {
 
 export default function App() {
   const colorScheme = useColorScheme();
-
+  const [showDisclaimer, setShowDisclaimer] = useState(
+    () => !storage.getBoolean(DISCLAIMER_KEY),
+  );
+  const handleAgree = () => {
+    storage.set(DISCLAIMER_KEY, true);
+    setShowDisclaimer(false);
+  };
   return (
     <GluestackUIProvider mode="dark">
       <NavigationContainer
@@ -91,6 +99,7 @@ export default function App() {
           />
         </Stack.Navigator>
       </NavigationContainer>
+      <DisclaimerModal visible={showDisclaimer} onAgree={handleAgree} />
     </GluestackUIProvider>
   );
 }
