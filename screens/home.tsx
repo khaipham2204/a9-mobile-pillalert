@@ -115,7 +115,10 @@ export default function HomeScreen() {
   // ── In-app clock (stable ref to avoid interval recreation) ─────────────
 
   const checkRef = useRef(checkDoseAlerts);
-  checkRef.current = checkDoseAlerts;
+
+  useEffect(() => {
+    checkRef.current = checkDoseAlerts;
+  }, [checkDoseAlerts]);
 
   useEffect(() => {
     checkRef.current();

@@ -39,7 +39,7 @@ export const loadDrugData = (): Drug[] => {
     if (json) return JSON.parse(json);
   } catch {}
   return Array.from({ length: 6 }, (_, i) => ({
-    name: `Drug #${i + 1}`,
+    name: `Slot #${i + 1}`,
     morning: 0,
     noon: 0,
     evening: 0,

@@ -7,8 +7,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useState } from "react";
 import { Modal, Pressable, View } from "react-native";
+import slugify from "slugify";
 import type { Drug, TimeSlotKey } from "./types";
 import { TIME_FIELDS, TIME_LABELS } from "./types";
 
@@ -85,11 +87,43 @@ export function DrugTable({
               <TableData className="px-3 py-2 text-center min-h-[52px]">
                 <Pressable
                   onPress={() => onLabelPress(item.name)}
-                  className="bg-blue-100 rounded-xl h-full w-full items-center justify-center border border-blue-200"
+                  className={`${editing ? "bg-amber-300" : "bg-blue-100"} rounded-xl min-h-12 h-full w-full items-center justify-center border border-blue-200`}
                 >
                   <Text className="text-slate-900 text-base font-bold">
                     {item.name}
                   </Text>
+                  {(() => {
+                    const photoExists = Boolean(
+                      photos[
+                        slugify(item.name, {
+                          lower: true,
+                          strict: true,
+                          replacement: "-",
+                        })
+                      ],
+                    );
+                    const status = editing
+                      ? { icon: "photo-camera" as const, label: "Take" }
+                      : photoExists
+                        ? { icon: "visibility" as const, label: "View" }
+                        : {
+                            icon: "photo-camera" as const,
+                            label: "Waiting",
+                          };
+
+                    return (
+                      <View className="flex-row items-center gap-1 mt-1">
+                        <MaterialIcons
+                          name={status.icon}
+                          size={14}
+                          color="#1e3a8a"
+                        />
+                        <Text className="text-blue-900 text-xs font-semibold">
+                          {status.label}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </Pressable>
               </TableData>
 
