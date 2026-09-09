@@ -18,6 +18,7 @@ type DrugTableProps = {
   data: Drug[];
   editing: boolean;
   photos: Record<string, string>;
+  notes: Record<string, string>;
   times: string[];
   onIncrement: (index: number, field: TimeSlotKey) => void;
   onDecrement: (index: number, field: TimeSlotKey) => void;
@@ -30,6 +31,7 @@ export function DrugTable({
   editing,
   photos,
   times,
+  notes,
   onIncrement,
   onDecrement,
   onHeaderPress,
@@ -93,34 +95,32 @@ export function DrugTable({
                     {item.name}
                   </Text>
                   {(() => {
-                    const photoExists = Boolean(
-                      photos[
-                        slugify(item.name, {
-                          lower: true,
-                          strict: true,
-                          replacement: "-",
-                        })
-                      ],
-                    );
-                    const status = editing
-                      ? { icon: "photo-camera" as const, label: "Take" }
-                      : photoExists
-                        ? { icon: "visibility" as const, label: "View" }
-                        : {
-                            icon: "photo-camera" as const,
-                            label: "Waiting",
-                          };
+                    const slug = slugify(item.name, {
+                      lower: true,
+                      strict: true,
+                      replacement: "-",
+                    });
+
+                    const photoExists = Boolean(photos[slug]);
+                    const noteExists = Boolean(notes[slug]);
 
                     return (
                       <View className="flex-row items-center gap-1 mt-1">
+                        {/* Photo */}
                         <MaterialIcons
-                          name={status.icon}
-                          size={14}
-                          color="#1e3a8a"
+                          name="photo-camera"
+                          size={16}
+                          color={photoExists ? "#1e3a8a" : "#94a3b8"}
                         />
-                        <Text className="text-blue-900 text-xs font-semibold">
-                          {status.label}
-                        </Text>
+
+                        <Text className="text-slate-400 text-xs">/</Text>
+
+                        {/* Note */}
+                        <MaterialIcons
+                          name="sticky-note-2"
+                          size={14}
+                          color={noteExists ? "#1e3a8a" : "#94a3b8"}
+                        />
                       </View>
                     );
                   })()}

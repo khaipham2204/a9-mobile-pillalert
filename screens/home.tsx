@@ -137,7 +137,10 @@ export default function HomeScreen() {
   }, [checkDoseAlerts]);
 
   const checkInitialRef = useRef(checkInitialDoseAlert);
-  checkInitialRef.current = checkInitialDoseAlert;
+
+  useEffect(() => {
+    checkInitialRef.current = checkInitialDoseAlert;
+  }, [checkInitialDoseAlert]);
 
   useEffect(() => {
     // Only the very first call of a mount may bypass the catch-up cap (fresh
@@ -201,6 +204,7 @@ export default function HomeScreen() {
           {/* Drug Table */}
           <DrugTable
             data={data}
+            notes={notes}
             editing={editing}
             photos={photos}
             times={times}
