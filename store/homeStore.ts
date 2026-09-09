@@ -32,6 +32,7 @@ import {
 import { BLE_DATA_TYPE, BLE_EVENT_TYPE } from "@/constants/theme";
 import { useBluetoothStore } from "@/store/bluetoothStore";
 import { storage } from "@/store/storage";
+import { navigate } from "@/utils/NavigationService";
 import * as Speech from "expo-speech";
 import slugify from "slugify";
 import { create } from "zustand";
@@ -40,8 +41,16 @@ import { subscribeWithSelector } from "zustand/middleware";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type HomeState = {
-  // ── Persistent data ──
+  /**
+   * Working copy edited while `editing === true`. Deliberately NOT
+   * persisted to MMKV (no subscribe below) — so if the app is killed
+   * mid-edit, the next launch re-reads `savedData` from storage into both
+   * `data` and `savedData`, discarding any unsaved temp changes instead of
+   * resurrecting them. Only committed via `handleSave()` → `savedData`.
+   */
   data: Drug[];
+
+  // ── Persistent data ──
   savedData: Drug[];
   photos: Record<string, string>;
   notes: Record<string, string>;
@@ -57,6 +66,8 @@ type HomeState = {
   labelPicker: { key: string; label: string } | null;
   /** Note editor (editing mode) / viewer (view mode) for a drug. */
   noteModal: { key: string; label: string; mode: "edit" | "view" } | null;
+  /** Shown from `handleSave()` when no BLE device is connected. */
+  bluetoothRequiredPromptVisible: boolean;
 
   // ── Actions ──
   setEditing: (editing: boolean) => void;
@@ -98,7 +109,18 @@ type HomeState = {
   /** Open the modal for a slot (notification tap), unless already answered. */
   openDoseAlert: (slotIndex: number) => void;
 
-  // ── Internal (clock check) ──
+  /** "Go connect" chosen from the Bluetooth-required prompt. */
+  goConnectBluetooth: () => void;
+  /** "Undo changes" chosen from the Bluetooth-required prompt — restores
+   * drug quantities to how they were when Edit was pressed, exits editing. */
+  revertPendingEdit: () => void;
+  /** Tap-outside / back — just hides the prompt, keeps editing untouched. */
+  dismissBluetoothRequiredPrompt: () => void;
+
+  // ── Internal ──
+  /** Snapshot of `data` taken when Edit was pressed — lets "Undo changes"
+   * restore drug quantities if Save is blocked by a missing BLE connection. */
+  _dataBeforeEdit: Drug[] | null;
   /** Per-day answer sheet, persisted to MMKV. */
   _slotState: SlotDayState;
   /** slotIndex → epoch ms before which the slot stays quiet. */
@@ -133,11 +155,19 @@ export const useHomeStore = create<HomeState>()(
     doseAlertIndex: null,
     labelPicker: null,
     noteModal: null,
+    bluetoothRequiredPromptVisible: false,
+    _dataBeforeEdit: null,
     _slotState: loadSlotState(),
     _snoozedUntil: {},
 
     // ── Actions ──
-    setEditing: (editing) => set({ editing }),
+    setEditing: (editing) =>
+      set((state) => ({
+        editing,
+        // Snapshot drug quantities on the way in, drop it on the way out —
+        // it's only needed to power "Undo changes" while editing is active.
+        _dataBeforeEdit: editing ? state.data : null,
+      })),
 
     increment: (index, field) =>
       set((state) => ({
@@ -156,18 +186,21 @@ export const useHomeStore = create<HomeState>()(
       })),
 
     handleSave: async () => {
-      const { data, times } = get();
+      const { connectedDevice, sendPayload } = useBluetoothStore.getState();
 
+      // No point committing drug quantities the device will never receive —
+      // ask the user to connect or undo instead (mục 3, popup 2 lựa chọn).
+      if (!connectedDevice) {
+        set({ bluetoothRequiredPromptVisible: true });
+        return;
+      }
+
+      const { data, times } = get();
       set({
         savedData: data,
         editing: false,
+        _dataBeforeEdit: null,
       });
-      const { connectedDevice, sendPayload } = useBluetoothStore.getState();
-
-      if (!connectedDevice) {
-        console.warn("Không có thiết bị Bluetooth đang kết nối.");
-        return;
-      }
       await sendPayload({
         type: BLE_DATA_TYPE.EVENT,
         message: {
@@ -295,6 +328,24 @@ export const useHomeStore = create<HomeState>()(
         .map((d) => ({ name: d.name, qty: d[field] }));
       speakDoseReminder(slotIndex, drugs);
     },
+
+    goConnectBluetooth: () => {
+      set({ bluetoothRequiredPromptVisible: false });
+      navigate("BleDevices");
+    },
+
+    revertPendingEdit: () => {
+      const { _dataBeforeEdit } = get();
+      set((state) => ({
+        data: _dataBeforeEdit ?? state.data,
+        editing: false,
+        _dataBeforeEdit: null,
+        bluetoothRequiredPromptVisible: false,
+      }));
+    },
+
+    dismissBluetoothRequiredPrompt: () =>
+      set({ bluetoothRequiredPromptVisible: false }),
 
     // ── Clock check (interval + AppState resume) ──
     checkDoseAlerts: (opts) => {

@@ -1,4 +1,5 @@
 import { BluetoothBanner } from "@/components/home/BluetoothBanner";
+import { BluetoothRequiredModal } from "@/components/home/BluetoothRequiredModal";
 import { DoseAlertModal } from "@/components/home/DoseAlertModal";
 import { DoseHistory } from "@/components/home/DoseHistory";
 import { DrugNoteModal } from "@/components/home/DrugNoteModal";
@@ -54,6 +55,7 @@ export default function HomeScreen() {
     doseAlertIndex,
     labelPicker,
     noteModal,
+    bluetoothRequiredPromptVisible,
     setEditing,
     increment,
     decrement,
@@ -69,6 +71,9 @@ export default function HomeScreen() {
     pickNoteFromLabelPicker,
     saveNote,
     closeNoteModal,
+    goConnectBluetooth,
+    revertPendingEdit,
+    dismissBluetoothRequiredPrompt,
     handleDoseConfirm,
     handleDoseSkip,
     snoozeDoseAlert,
@@ -284,6 +289,14 @@ export default function HomeScreen() {
         times={times}
         onClose={() => setEditingTimeIndex(null)}
         onChangeTime={setTimes}
+      />
+
+      {/* Bluetooth Required Modal */}
+      <BluetoothRequiredModal
+        visible={bluetoothRequiredPromptVisible}
+        onConnect={goConnectBluetooth}
+        onRevert={revertPendingEdit}
+        onClose={dismissBluetoothRequiredPrompt}
       />
 
       {/* Dose Alert Modal */}
