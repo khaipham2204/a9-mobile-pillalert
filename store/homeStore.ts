@@ -1,9 +1,12 @@
 import {
+  hasCompletedFirstLaunch,
   loadDrugData,
   loadHistory,
+  loadNotes,
   loadPhotos,
   loadSlotState,
   loadTimes,
+  markFirstLaunchDone,
   minutesOfDay,
   speakDoseReminder,
   syncSlotNotifications,
@@ -15,6 +18,7 @@ import {
   DOSE_SNOOZE_MINUTES,
   STORAGE_KEY_DATA,
   STORAGE_KEY_HISTORY,
+  STORAGE_KEY_NOTES,
   STORAGE_KEY_PHOTOS,
   STORAGE_KEY_SLOT_STATE,
   STORAGE_KEY_TIME,
@@ -29,6 +33,7 @@ import { BLE_DATA_TYPE, BLE_EVENT_TYPE } from "@/constants/theme";
 import { useBluetoothStore } from "@/store/bluetoothStore";
 import { storage } from "@/store/storage";
 import * as Speech from "expo-speech";
+import slugify from "slugify";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
@@ -39,6 +44,7 @@ type HomeState = {
   data: Drug[];
   savedData: Drug[];
   photos: Record<string, string>;
+  notes: Record<string, string>;
   times: string[];
   history: DoseRecord[];
 
@@ -47,6 +53,10 @@ type HomeState = {
   previewUri: string | null;
   editingTimeIndex: number | null;
   doseAlertIndex: number | null;
+  /** Photo-or-note chooser popup, opened from a drug label press. */
+  labelPicker: { key: string; label: string } | null;
+  /** Note editor (editing mode) / viewer (view mode) for a drug. */
+  noteModal: { key: string; label: string; mode: "edit" | "view" } | null;
 
   // ── Actions ──
   setEditing: (editing: boolean) => void;
@@ -58,6 +68,23 @@ type HomeState = {
   setEditingTimeIndex: (index: number | null) => void;
   setTimes: (updater: string[] | ((prev: string[]) => string[])) => void;
   setPhoto: (key: string, uri: string) => void;
+  setNote: (key: string, note: string) => void;
+
+  /** Drug label pressed — open the photo-or-note chooser popup. */
+  openLabelPicker: (label: string) => void;
+  closeLabelPicker: () => void;
+  /**
+   * Camera icon pressed in the chooser. Closes the popup; in view mode with
+   * an existing photo it opens the preview directly. Returns the drug key
+   * when the screen still needs to navigate to the Camera screen (editing
+   * mode) — null otherwise.
+   */
+  pickCameraFromLabelPicker: () => string | null;
+  /** Note icon pressed in the chooser — opens the note editor/viewer. */
+  pickNoteFromLabelPicker: () => void;
+  /** Save button in the note editor — persists the note and closes it. */
+  saveNote: (text: string) => void;
+  closeNoteModal: () => void;
   handleDoseConfirm: (
     slotKey: TimeSlotKey,
     drugs: { name: string; qty: number }[],
@@ -76,7 +103,15 @@ type HomeState = {
   _slotState: SlotDayState;
   /** slotIndex → epoch ms before which the slot stays quiet. */
   _snoozedUntil: Record<string, number>;
-  checkDoseAlerts: () => void;
+  checkDoseAlerts: (opts?: { ignoreCatchUp?: boolean }) => void;
+  /**
+   * Call once when the screen mounts. On the very first run ever (fresh
+   * install, or app data cleared) it raises the alert for the nearest slot
+   * whose time has already passed "today", ignoring the catch-up cap — so
+   * the user always sees one popup on entry, whatever time they installed
+   * the app. Every later mount behaves like a normal `checkDoseAlerts()`.
+   */
+  checkInitialDoseAlert: () => void;
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -89,12 +124,15 @@ export const useHomeStore = create<HomeState>()(
     data: initialDrugData,
     savedData: initialDrugData,
     photos: loadPhotos(),
+    notes: loadNotes(),
     times: loadTimes(),
     history: loadHistory(),
     editing: false,
     previewUri: null,
     editingTimeIndex: null,
     doseAlertIndex: null,
+    labelPicker: null,
+    noteModal: null,
     _slotState: loadSlotState(),
     _snoozedUntil: {},
 
@@ -159,6 +197,43 @@ export const useHomeStore = create<HomeState>()(
     setPhoto: (key, uri) =>
       set((state) => ({ photos: { ...state.photos, [key]: uri } })),
 
+    setNote: (key, note) =>
+      set((state) => ({ notes: { ...state.notes, [key]: note } })),
+
+    openLabelPicker: (label) => {
+      const key = slugify(label, { lower: true, strict: true, replacement: "-" });
+      set({ labelPicker: { key, label } });
+    },
+    closeLabelPicker: () => set({ labelPicker: null }),
+
+    pickCameraFromLabelPicker: () => {
+      const { labelPicker, editing, photos } = get();
+      if (!labelPicker) return null;
+      const { key } = labelPicker;
+      set({ labelPicker: null });
+      if (editing) return key;
+      if (photos[key]) set({ previewUri: photos[key] });
+      return null;
+    },
+
+    pickNoteFromLabelPicker: () => {
+      const { labelPicker, editing } = get();
+      if (!labelPicker) return;
+      const { key, label } = labelPicker;
+      set({
+        labelPicker: null,
+        noteModal: { key, label, mode: editing ? "edit" : "view" },
+      });
+    },
+
+    saveNote: (text) => {
+      const { noteModal } = get();
+      if (!noteModal) return;
+      get().setNote(noteModal.key, text.trim());
+      set({ noteModal: null });
+    },
+    closeNoteModal: () => set({ noteModal: null }),
+
     handleDoseConfirm: (slotKey, drugs) => {
       const record: DoseRecord = {
         takenAt: new Date().toISOString(),
@@ -222,7 +297,7 @@ export const useHomeStore = create<HomeState>()(
     },
 
     // ── Clock check (interval + AppState resume) ──
-    checkDoseAlerts: () => {
+    checkDoseAlerts: (opts) => {
       const { editing, times, savedData, doseAlertIndex, _snoozedUntil } =
         get();
 
@@ -239,6 +314,9 @@ export const useHomeStore = create<HomeState>()(
 
       const now = Date.now();
       const nowMin = minutesOfDay();
+      const catchUpCap = opts?.ignoreCatchUp
+        ? Number.POSITIVE_INFINITY
+        : DOSE_CATCH_UP_MINUTES;
 
       // Pick the latest slot that is due, unanswered and not snoozed.
       // A window (not an exact "HH:mm" equality) is what makes catch-up work:
@@ -251,7 +329,7 @@ export const useHomeStore = create<HomeState>()(
         if (slotMin === null) continue;
 
         const lateBy = nowMin - slotMin;
-        if (lateBy < 0 || lateBy > DOSE_CATCH_UP_MINUTES) continue;
+        if (lateBy < 0 || lateBy > catchUpCap) continue;
         if (slotState.resolved[`${i}`]) continue;
         if ((_snoozedUntil[`${i}`] ?? 0) > now) continue;
 
@@ -269,6 +347,16 @@ export const useHomeStore = create<HomeState>()(
         .filter((d) => d[field] > 0)
         .map((d) => ({ name: d.name, qty: d[field] }));
       speakDoseReminder(dueIndex, drugs);
+    },
+
+    checkInitialDoseAlert: () => {
+      const alreadyLaunched = hasCompletedFirstLaunch();
+      if (alreadyLaunched) {
+        get().checkDoseAlerts();
+        return;
+      }
+      markFirstLaunchDone();
+      get().checkDoseAlerts({ ignoreCatchUp: true });
     },
   })),
 );
@@ -304,6 +392,11 @@ useHomeStore.subscribe(
 useHomeStore.subscribe(
   (s) => s.photos,
   (photos) => storage.set(STORAGE_KEY_PHOTOS, JSON.stringify(photos)),
+);
+
+useHomeStore.subscribe(
+  (s) => s.notes,
+  (notes) => storage.set(STORAGE_KEY_NOTES, JSON.stringify(notes)),
 );
 
 useHomeStore.subscribe(

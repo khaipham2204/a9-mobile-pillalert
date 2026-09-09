@@ -1,7 +1,9 @@
 import { BluetoothBanner } from "@/components/home/BluetoothBanner";
 import { DoseAlertModal } from "@/components/home/DoseAlertModal";
 import { DoseHistory } from "@/components/home/DoseHistory";
+import { DrugNoteModal } from "@/components/home/DrugNoteModal";
 import { DrugTable } from "@/components/home/DrugTable";
+import { LabelPickerModal } from "@/components/home/LabelPickerModal";
 import { TimePickerModal } from "@/components/home/TimePickerModal";
 import {
   setupNotificationHandler,
@@ -29,7 +31,6 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import slugify from "slugify";
 
 setupNotificationHandler();
 
@@ -45,11 +46,14 @@ export default function HomeScreen() {
     data,
     savedData,
     photos,
+    notes,
     times,
     editing,
     previewUri,
     editingTimeIndex,
     doseAlertIndex,
+    labelPicker,
+    noteModal,
     setEditing,
     increment,
     decrement,
@@ -59,11 +63,18 @@ export default function HomeScreen() {
     setEditingTimeIndex,
     setTimes,
     setPhoto,
+    openLabelPicker,
+    closeLabelPicker,
+    pickCameraFromLabelPicker,
+    pickNoteFromLabelPicker,
+    saveNote,
+    closeNoteModal,
     handleDoseConfirm,
     handleDoseSkip,
     snoozeDoseAlert,
     openDoseAlert,
     checkDoseAlerts,
+    checkInitialDoseAlert,
     history,
     clearHistory,
   } = useHomeStore();
@@ -117,8 +128,13 @@ export default function HomeScreen() {
   const checkRef = useRef(checkDoseAlerts);
   checkRef.current = checkDoseAlerts;
 
+  const checkInitialRef = useRef(checkInitialDoseAlert);
+  checkInitialRef.current = checkInitialDoseAlert;
+
   useEffect(() => {
-    checkRef.current();
+    // Only the very first call of a mount may bypass the catch-up cap (fresh
+    // install case) — every later tick uses the regular checkDoseAlerts().
+    checkInitialRef.current();
     const interval = setInterval(
       () => checkRef.current(),
       DOSE_CHECK_INTERVAL_MS,
@@ -139,13 +155,9 @@ export default function HomeScreen() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleLabelPress = (label: string) => {
-    const key = slugify(label, { lower: true, strict: true, replacement: "-" });
-    if (editing) {
-      navigation.navigate("Camera", { drugId: key });
-    } else if (photos[key]) {
-      setPreviewUri(photos[key]);
-    }
+  const handlePickCamera = () => {
+    const key = pickCameraFromLabelPicker();
+    if (key) navigation.navigate("Camera", { drugId: key });
   };
 
   useEffect(() => {
@@ -187,7 +199,7 @@ export default function HomeScreen() {
             onIncrement={increment}
             onDecrement={decrement}
             onHeaderPress={handleHeaderPress}
-            onLabelPress={handleLabelPress}
+            onLabelPress={openLabelPicker}
           />
           {/* Action Buttons */}
           <View className="mt-5 flex-row gap-3">
@@ -245,6 +257,25 @@ export default function HomeScreen() {
           )}
         </Pressable>
       </Modal>
+
+      {/* Photo/Note Picker Modal */}
+      <LabelPickerModal
+        visible={labelPicker !== null}
+        label={labelPicker?.label ?? ""}
+        onPressCamera={handlePickCamera}
+        onPressNote={pickNoteFromLabelPicker}
+        onClose={closeLabelPicker}
+      />
+
+      {/* Drug Note Modal */}
+      <DrugNoteModal
+        visible={noteModal !== null}
+        label={noteModal?.label ?? ""}
+        mode={noteModal?.mode ?? "view"}
+        initialValue={noteModal ? (notes[noteModal.key] ?? "") : ""}
+        onSave={saveNote}
+        onClose={closeNoteModal}
+      />
 
       {/* Time Picker Modal */}
       <TimePickerModal
