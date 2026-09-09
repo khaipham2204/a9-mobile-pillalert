@@ -8,7 +8,9 @@ import {
   type Drug,
   type SlotDayState,
   STORAGE_KEY_DATA,
+  STORAGE_KEY_FIRST_LAUNCH_DONE,
   STORAGE_KEY_HISTORY,
+  STORAGE_KEY_NOTES,
   STORAGE_KEY_PHOTOS,
   STORAGE_KEY_SLOT_STATE,
   STORAGE_KEY_TIME,
@@ -54,6 +56,14 @@ export const loadPhotos = (): Record<string, string> => {
   return {};
 };
 
+export const loadNotes = (): Record<string, string> => {
+  try {
+    const json = storage.getString(STORAGE_KEY_NOTES);
+    if (json) return JSON.parse(json);
+  } catch {}
+  return {};
+};
+
 export const loadTimes = (): string[] => {
   try {
     const json = storage.getString(STORAGE_KEY_TIME);
@@ -81,6 +91,14 @@ export const loadSlotState = (): SlotDayState => {
     }
   } catch {}
   return { date: today, resolved: {} };
+};
+
+/** True once the app has ever run the entry-alert check (persists across restarts). */
+export const hasCompletedFirstLaunch = (): boolean =>
+  storage.getBoolean(STORAGE_KEY_FIRST_LAUNCH_DONE) === true;
+
+export const markFirstLaunchDone = () => {
+  storage.set(STORAGE_KEY_FIRST_LAUNCH_DONE, true);
 };
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────

@@ -33,9 +33,14 @@ export const DEFAULT_TIMES = ["08:30", "12:30", "18:30"];
 
 export const STORAGE_KEY_DATA = "home:drugData";
 export const STORAGE_KEY_PHOTOS = "home:photos";
+export const STORAGE_KEY_NOTES = "home:notes";
 export const STORAGE_KEY_TIME = "home:time";
 export const STORAGE_KEY_HISTORY = "home:doseHistory";
 export const STORAGE_KEY_SLOT_STATE = "home:slotState";
+export const STORAGE_KEY_FIRST_LAUNCH_DONE = "home:firstLaunchDone";
+
+/** Max characters allowed in a per-drug note. */
+export const MAX_NOTE_LENGTH = 50;
 
 /** How long after a scheduled time the modal can still be raised (catch-up). */
 export const DOSE_CATCH_UP_MINUTES = 180;
