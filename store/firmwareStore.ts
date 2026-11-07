@@ -28,8 +28,13 @@ const DATA_RETRIES = 3;
 const REBOOT_WAIT_MS = 3_000;
 const RECONNECT_TIMEOUT_MS = 45_000;
 // Board confirms the new version after running stably for 15s (ota.CONFIRM_AFTER_MS)
-const CONFIRM_TIMEOUT_MS = 60_000;
+const CONFIRM_TIMEOUT_MS = 90_000;
 const CONFIRM_POLL_MS = 3_000;
+const CHECK_RETRIES = 3;
+const CHECK_INITIAL_DELAY_MS = 1_000;
+const CHECK_RETRY_DELAY_MS = 2_000;
+const INFO_NOTIFY_TIMEOUT_MS = 2_000;
+const JSON_ARRAY_START = 0x5b; // '['
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +67,10 @@ type FirmwareState = {
   bundleVersion: string;
   /** true = board differs from the bundled firmware; null = unknown / not connected */
   updateAvailable: boolean | null;
+  /** true = connected but the board's firmware could not be read (still allow updating) */
+  checkFailed: boolean;
+  /** true while checkForUpdate is talking to the board */
+  checking: boolean;
 
   /** Compares the connected board's files with the bundle (no-op while updating). */
   checkForUpdate: () => Promise<void>;
@@ -178,11 +187,45 @@ class OtaChannel {
   async send(data: Uint8Array, readFull = false): Promise<Uint8Array> {
     const op = data[0];
 
+    // INFO is idempotent and its request is easy to tell apart from the reply
+    // (request byte 1 is the JSON '[' — reply byte 1 is a status code), so if
+    // the notify is missed (e.g. notifications not enabled yet right after
+    // subscribing) fall back to reading the reply from the characteristic.
+    if (op === OP_INFO) {
+      try {
+        return await this.sendOnce(data, readFull, INFO_NOTIFY_TIMEOUT_MS);
+      } catch (err) {
+        const c = await manager.readCharacteristicForDevice(
+          this.deviceId,
+          BLE_SERVICE_UUID,
+          BLE_OTA_CHAR_UUID,
+        );
+        const bytes = c.value ? base64ToBytes(c.value) : null;
+        if (!bytes || bytes[0] !== OP_INFO || bytes[1] === JSON_ARRAY_START) {
+          throw err;
+        }
+        if (bytes[1] !== STATUS_OK) {
+          throw new Error(bytesToText(bytes.subarray(2)) || "Board rejected update");
+        }
+        return bytes.subarray(2);
+      }
+    }
+
+    return this.sendOnce(data, readFull, COMMAND_TIMEOUT_MS);
+  }
+
+  private async sendOnce(
+    data: Uint8Array,
+    readFull: boolean,
+    timeoutMs: number,
+  ): Promise<Uint8Array> {
+    const op = data[0];
+
     const response = new Promise<Uint8Array>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.pending?.op === op) this.pending = null;
         reject(new Error(`OTA timeout (op ${op})`));
-      }, COMMAND_TIMEOUT_MS);
+      }, timeoutMs);
       this.pending = {
         op,
         resolve: (v) => {
@@ -229,6 +272,9 @@ class OtaChannel {
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 let cancelRequested = false;
+/** Bumped by every check / update; a check whose generation is stale drops its result. */
+let checkGeneration = 0;
+let checkInFlight: Promise<void> | null = null;
 
 const negotiateMtu = async (device: Device) => {
   if (Platform.OS === "android") {
@@ -330,28 +376,70 @@ export const useFirmwareStore = create<FirmwareState>((set, get) => ({
   boardInfo: null,
   bundleVersion: FIRMWARE_BUNDLE.version,
   updateAvailable: null,
+  checkFailed: false,
+  checking: false,
 
-  checkForUpdate: async () => {
-    // startUpdate reconnects on its own — don't interfere mid-update
-    if (BUSY_STATUSES.includes(get().status)) return;
-
-    const device = useBluetoothStore.getState().connectedDevice;
-    if (!device) {
-      set({ updateAvailable: null });
-      return;
-    }
-
-    try {
-      const info = await readInfo(
-        device.id,
-        FIRMWARE_BUNDLE.files.map((f) => f.name),
-      );
+  checkForUpdate: () => {
+    const run = async () => {
+      // startUpdate reconnects on its own — don't interfere mid-update
       if (BUSY_STATUSES.includes(get().status)) return;
-      set({ boardInfo: info, updateAvailable: differsFromBundle(info) });
-    } catch {
-      // Board without OTA support, or disconnected while checking
-      set({ updateAvailable: null });
-    }
+
+      const generation = ++checkGeneration;
+      const isStale = () =>
+        generation !== checkGeneration ||
+        BUSY_STATUSES.includes(get().status);
+
+      const device = useBluetoothStore.getState().connectedDevice;
+      if (!device) {
+        set({ updateAvailable: null, checkFailed: false });
+        return;
+      }
+
+      set({ checkFailed: false });
+
+      // Right after connecting the app is still syncing time/alarms over BLE,
+      // so the first INFO request can fail — retry a few times before giving up.
+      for (let attempt = 0; attempt < CHECK_RETRIES; attempt++) {
+        await sleep(
+          attempt === 0 ? CHECK_INITIAL_DELAY_MS : CHECK_RETRY_DELAY_MS,
+        );
+
+        if (isStale()) return;
+        if (useBluetoothStore.getState().connectedDevice?.id !== device.id) {
+          return; // disconnected / switched device
+        }
+
+        try {
+          const info = await readInfo(
+            device.id,
+            FIRMWARE_BUNDLE.files.map((f) => f.name),
+          );
+          if (isStale()) return;
+          set({ boardInfo: info, updateAvailable: differsFromBundle(info) });
+          return;
+        } catch (err) {
+          console.warn(`Firmware check failed (attempt ${attempt + 1}):`, err);
+        }
+      }
+
+      // Couldn't read the board — still show the card so the user can update
+      if (
+        !isStale() &&
+        useBluetoothStore.getState().connectedDevice?.id === device.id
+      ) {
+        set({ updateAvailable: null, checkFailed: true });
+      }
+    };
+
+    set({ checking: true });
+    const promise = run().finally(() => {
+      if (checkInFlight === promise) {
+        checkInFlight = null;
+        set({ checking: false });
+      }
+    });
+    checkInFlight = promise;
+    return promise;
   },
 
   startUpdate: async () => {
@@ -367,6 +455,12 @@ export const useFirmwareStore = create<FirmwareState>((set, get) => ({
     }
 
     cancelRequested = false;
+    // Invalidate any pending check and let its BLE request finish first so two
+    // OTA channels never subscribe to the characteristic at the same time.
+    checkGeneration++;
+    set({ status: "checking", checkFailed: false });
+    if (checkInFlight) await checkInFlight.catch(() => {});
+
     set({
       status: "checking",
       progress: 0,
@@ -401,6 +495,7 @@ export const useFirmwareStore = create<FirmwareState>((set, get) => ({
           progress: 1,
           message: "Board is already up to date.",
           updateAvailable: false,
+          checkFailed: false,
         });
         return;
       }
@@ -478,6 +573,7 @@ export const useFirmwareStore = create<FirmwareState>((set, get) => ({
       set({
         status: "done",
         updateAvailable: false,
+        checkFailed: false,
         message: `Updated to ${FIRMWARE_BUNDLE.version} (${changed
           .map((f) => f.name)
           .join(", ")}).`,
@@ -502,12 +598,18 @@ export const useFirmwareStore = create<FirmwareState>((set, get) => ({
     cancelRequested = true;
   },
 
-  reset: () =>
+  reset: () => {
+    // After a successful update the board matches the bundle — make sure the
+    // card disappears instead of falling back to "Update firmware".
+    const wasDone = get().status === "done";
+    checkGeneration++;
     set({
       status: "idle",
       progress: 0,
       currentFile: null,
       message: null,
       error: null,
-    }),
+      ...(wasDone ? { updateAvailable: false, checkFailed: false } : {}),
+    });
+  },
 }));

@@ -194,9 +194,18 @@ export default function HomeScreen() {
     }
   }, [route.params, navigation, setPhoto]);
 
-  const firmwareStatus = useFirmwareStore((s) => s.status);
-  const firmwareUpdateAvailable = useFirmwareStore((s) => s.updateAvailable);
-  const checkForFirmwareUpdate = useFirmwareStore((s) => s.checkForUpdate);
+  const {
+    status: firmwareStatus,
+    checking: firmwareChecking,
+    checkForUpdate: checkForFirmwareUpdate,
+  } = useFirmwareStore();
+  // Lock plan editing until the firmware check (or an update) has finished
+  const firmwareBusy =
+    !!connectedDevice &&
+    (firmwareChecking ||
+      ["checking", "uploading", "rebooting", "verifying"].includes(
+        firmwareStatus,
+      ));
 
   // Ask the board which firmware it runs whenever a device (re)connects
   const connectedDeviceId = connectedDevice?.id;
@@ -225,10 +234,7 @@ export default function HomeScreen() {
             onDisconnect={() => disconnectDevice()}
           />
           {/* Firmware update (OTA) — only when the board is outdated or mid-update */}
-          {(firmwareStatus !== "idle" ||
-            (connectedDevice && firmwareUpdateAvailable)) && (
-            <FirmwareUpdateCard />
-          )}
+          <FirmwareUpdateCard />
           {/* Drug Table */}
           <DrugTable
             data={data}
@@ -247,10 +253,12 @@ export default function HomeScreen() {
               <Button
                 size="lg"
                 onPress={() => setEditing(true)}
-                className="flex-1 h-14 rounded-2xl bg-blue-600 shadow-sm data-[active=true]:bg-blue-500 data-[active=true]:text-white"
+                isDisabled={firmwareBusy}
+                className="flex-1 h-14 rounded-2xl bg-blue-600 shadow-sm data-[active=true]:bg-blue-500 data-[active=true]:text-white data-[disabled=true]:opacity-60"
               >
+                {firmwareBusy && <ButtonSpinner color="#fff" />}
                 <ButtonText className="font-bold text-white text-base  tracking-wide data-[active=true]:text-white">
-                  ✎ Edit plan
+                  {firmwareBusy ? "Checking firmware…" : "✎ Edit plan"}
                 </ButtonText>
               </Button>
             ) : (

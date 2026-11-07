@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text";
 import { FIRMWARE_BUNDLE } from "@/constants/firmwareBundle";
+import { useBluetoothStore } from "@/store/bluetoothStore";
 import { FirmwareStatus, useFirmwareStore } from "@/store/firmwareStore";
 import { ActivityIndicator, Alert, Pressable, View } from "react-native";
 
@@ -21,14 +22,23 @@ export function FirmwareUpdateCard() {
     message,
     error,
     boardInfo,
+    updateAvailable,
+    checkFailed,
     startUpdate,
     cancelUpdate,
     reset,
   } = useFirmwareStore();
+  const { connectedDevice } = useBluetoothStore();
 
   const busy = ["checking", "uploading", "rebooting", "verifying"].includes(
     status,
   );
+
+  // Visible while updating (board may be briefly disconnected while it
+  // reboots), or when connected and the board is outdated / unreadable.
+  const visible =
+    status !== "idle" ||
+    (!!connectedDevice && (updateAvailable === true || checkFailed));
 
   const confirmUpdate = () =>
     Alert.alert(
@@ -39,6 +49,8 @@ export function FirmwareUpdateCard() {
         { text: "Update", onPress: startUpdate },
       ],
     );
+
+  if (!visible) return null;
 
   return (
     <View className="bg-white border border-blue-100 rounded-2xl px-4 py-4 mb-4 shadow-sm">
