@@ -9,6 +9,7 @@ import { create } from "zustand";
 
 export const manager = new BleManager();
 const SCAN_TIMEOUT_MS = 10_000;
+const PREFERRED_MTU = 247;
 
 // UUID phải khớp với firmware/ble_server.py
 export const BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
@@ -283,6 +284,17 @@ export const useBluetoothStore = create<BluetoothState>((set, get) => ({
       const connected = await manager.connectToDevice(device.id);
       const discovered =
         await connected.discoverAllServicesAndCharacteristics();
+
+      // Default MTU (23) truncates the board's OTA INFO reply (~200 bytes),
+      // which made the firmware check / post-update confirm fail. Ask for a
+      // large MTU on every connection (iOS negotiates automatically).
+      if (Platform.OS === "android") {
+        try {
+          await manager.requestMTUForDevice(device.id, PREFERRED_MTU);
+        } catch (err) {
+          console.warn("MTU request failed:", err);
+        }
+      }
 
       // Find writable + notifiable characteristics
       const services = await discovered.services();

@@ -183,47 +183,78 @@ def update_pill_slot_leds(period):
         slot_led.value(1 if qty >= 1 else 0)
 
 
-BATTERY_SQUARE_COUNT = 5    # mỗi ô = 20%
-BATTERY_SQUARE_SIZE = 8     # px
-BATTERY_SQUARE_GAP = 2      # px
+# Dòng đầu: chữ "PillAlert" bên trái, 3 icon pin bên phải. Mỗi icon =
+# 1/3 (~33%) dung lượng, ruột được tô theo pixel nên thể hiện chính xác cả
+# phần lẻ của 1 icon.
+#
+#   ############
+#   #          ##
+#   # ######   ##   <- ruột (fill) rộng BATTERY_ICON_INNER_W px
+#   #          ##
+#   ############
+HEADER_TITLE = "PillAlert"
+OLED_WIDTH = 128
+BATTERY_ICON_COUNT = 3
+BATTERY_ICON_BODY_W = 12    # px, thân pin (gồm viền)
+BATTERY_ICON_H = 7          # px
+BATTERY_ICON_NUB_W = 1      # px, cực dương
+BATTERY_ICON_NUB_H = 3      # px
+BATTERY_ICON_GAP = 2        # px, khoảng cách giữa các icon
+# Ruột: cách viền 1px mỗi bên -> rộng = thân - 2 viền - 2 khe
+BATTERY_ICON_INNER_W = BATTERY_ICON_BODY_W - 4
+BATTERY_ICON_INNER_H = BATTERY_ICON_H - 4
+BATTERY_ICON_STEP = BATTERY_ICON_BODY_W + BATTERY_ICON_NUB_W + BATTERY_ICON_GAP
+BATTERY_ROW_W = BATTERY_ICON_COUNT * BATTERY_ICON_STEP - BATTERY_ICON_GAP
+# Dòng chữ đầu tiên (y=0) dành cho header, nội dung bắt đầu từ dòng 2
+BATTERY_ROW_Y = 0
 
 
-import framebuf
+def draw_battery_icon(x, y, fill_px):
+    oled.rect(x, y, BATTERY_ICON_BODY_W, BATTERY_ICON_H, 1)
+    oled.fill_rect(
+        x + BATTERY_ICON_BODY_W,
+        y + (BATTERY_ICON_H - BATTERY_ICON_NUB_H) // 2,
+        BATTERY_ICON_NUB_W,
+        BATTERY_ICON_NUB_H,
+        1,
+    )
+    if fill_px > 0:
+        oled.fill_rect(x + 2, y + 2, fill_px, BATTERY_ICON_INNER_H, 1)
 
-# Bitmap 8x8 (MONO_HLSB: mỗi byte = 1 hàng, bit 1 = pixel sáng)
-_SQUARE_FILLED = framebuf.FrameBuffer(
-    bytearray([0xFF] * 8), 8, 8, framebuf.MONO_HLSB
-)
-_SQUARE_EMPTY = framebuf.FrameBuffer(
-    bytearray([0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF]),
-    8, 8, framebuf.MONO_HLSB,
-)
 
+def draw_battery_row(y=BATTERY_ROW_Y):
+    """Vẽ 3 icon pin; tổng phần ruột được tô tỉ lệ với % pin."""
 
-def draw_battery_squares(y):
-    """Vẽ thanh pin bằng các ô vuông: ô đặc = còn pin, ô rỗng = hết."""
+    total_px = BATTERY_ICON_COUNT * BATTERY_ICON_INNER_W
 
     if battery_percent is None:
-        filled = 0
+        filled_px = 0
     else:
-        # làm tròn lên để pin còn >0% vẫn hiện ít nhất 1 ô
-        filled = min(
-            BATTERY_SQUARE_COUNT,
-            (battery_percent * BATTERY_SQUARE_COUNT + 99) // 100,
-        )
+        percent = max(0, min(100, battery_percent))
+        filled_px = (percent * total_px + 50) // 100
+        # pin còn >0% thì vẫn hiện ít nhất 1 vạch
+        if percent > 0 and filled_px == 0:
+            filled_px = 1
 
-    label = "Battery:"
-    oled.text(label, 0, y)
-
-    # Các ô vuông bắt đầu sau chữ "Battery:" (8 px/ký tự) + 4 px cách
-    x = len(label) * 8 + 4
-    for i in range(BATTERY_SQUARE_COUNT):
-        bitmap = _SQUARE_FILLED if i < filled else _SQUARE_EMPTY
-        oled.blit(bitmap, x, y)
-        x += BATTERY_SQUARE_SIZE + BATTERY_SQUARE_GAP
+    # Căn phải
+    x = OLED_WIDTH - BATTERY_ROW_W
+    for _ in range(BATTERY_ICON_COUNT):
+        icon_fill = max(0, min(BATTERY_ICON_INNER_W, filled_px))
+        draw_battery_icon(x, y, icon_fill)
+        filled_px -= BATTERY_ICON_INNER_W
+        x += BATTERY_ICON_STEP
 
 
-def show_message(msg, battery_y=None):
+def draw_header():
+    """Dòng đầu: tên app bên trái, pin bên phải."""
+
+    oled.text(HEADER_TITLE, 0, BATTERY_ROW_Y)
+    draw_battery_row()
+
+
+def show_message(msg, show_battery=False):
+    """show_battery=True: dòng đầu là header (PillAlert + pin), msg bắt đầu từ dòng 2."""
+
     oled.fill(0)
 
     msg = str(msg)
@@ -233,21 +264,21 @@ def show_message(msg, battery_y=None):
     lines = msg.split("\n")
 
     y = 0
-    for line in lines[:6]:
+    max_lines = 6
+    if show_battery:
+        draw_header()
+        y = 10
+        max_lines = 5
+
+    for line in lines[:max_lines]:
         oled.text(line[:16], 0, y)
         y += 10
-
-    if battery_y is not None:
-        draw_battery_squares(battery_y)
 
     oled.show()
 
 
 def show_waiting():
-    show_message(
-        "PillAlert v1.01\n\n"
-        "Waiting..."
-    )
+    show_message("\nWaiting...", show_battery=True)
 
 
 def show_connected():
@@ -678,22 +709,12 @@ def render_screen(force=False):
             else "Alarm: --:--"
         )
 
-        if is_connected:
-            show_message(
-                "PillAlert v1.01\n"
-                "Connected\n"
-                "Waiting time\n"
-                + alarm_summary,
-                battery_y=40,
-            )
-        else:
-            show_message(
-                "PillAlert v1.01\n"
-                "BLE: Offline\n"
-                "Waiting time\n"
-                + alarm_summary,
-                battery_y=40,
-            )
+        show_message(
+            ("Connected\n" if is_connected else "BLE: Offline\n")
+            + "Waiting time\n"
+            + alarm_summary,
+            show_battery=True,
+        )
         return
 
     date_time = get_local_datetime()
@@ -731,7 +752,6 @@ def render_screen(force=False):
         next_alarm = get_next_alarm_text(hour, minute)
 
         screen = (
-            "PillAlert v1.01\n"
             "{:02d}:{:02d}:{:02d}\n"
             "{:02d}/{:02d}/{:04d}\n"
             "Next: {}\n"
@@ -747,8 +767,8 @@ def render_screen(force=False):
             connection_text,
         )
 
-    # Màn hình thường: thanh pin ở dòng thứ 6 (y=50). Màn alarm không hiện pin.
-    show_message(screen, battery_y=None if alarm_is_active else 50)
+    # Màn hình thường: header (PillAlert + pin) ở dòng đầu. Màn alarm không hiện.
+    show_message(screen, show_battery=not alarm_is_active)
 
 
 TYPE_EVENT = "event"
@@ -872,10 +892,7 @@ def process_complete_message(encoded_message):
 
     except Exception as err:
         print("Invalid BLE message:", err)
-        show_message(
-            "PillAlert v1.01\n\n"
-            "Invalid payload"
-        )
+        show_message("\nInvalid payload", show_battery=True)
 
 
 def is_complete_json(text):
@@ -899,10 +916,7 @@ def on_message(chunk):
     if len(ble_rx_buffer) > MAX_BLE_BUFFER_SIZE:
         print("BLE buffer overflow")
         ble_rx_buffer = ""
-        show_message(
-            "PillAlert v1.01\n\n"
-            "Buffer overflow"
-        )
+        show_message("\nBuffer overflow", show_battery=True)
         return
 
     # JSON thuần hoàn chỉnh hoặc Base64 có padding '=' ở cuối
@@ -918,6 +932,7 @@ def on_message(chunk):
 
 set_outputs_off()
 load_persisted_state()
+update_battery_state()  # đọc pin trước để màn hình chờ hiện đúng icon
 show_waiting()
 
 ble = BLEServer(
