@@ -197,15 +197,28 @@ export default function HomeScreen() {
   const {
     status: firmwareStatus,
     checking: firmwareChecking,
+    updateAvailable: firmwareOutdated,
     checkForUpdate: checkForFirmwareUpdate,
   } = useFirmwareStore();
-  // Lock plan editing until the firmware check (or an update) has finished
-  const firmwareBusy =
-    !!connectedDevice &&
-    (firmwareChecking ||
-      ["checking", "uploading", "rebooting", "verifying"].includes(
-        firmwareStatus,
-      ));
+  // An update keeps running while the board reboots (briefly disconnected),
+  // so it locks editing regardless of the connection.
+  const firmwareUpdating = [
+    "checking",
+    "uploading",
+    "rebooting",
+    "verifying",
+  ].includes(firmwareStatus);
+  const firmwareCheckingBoard = !!connectedDevice && firmwareChecking;
+  // Board runs old firmware: the plan format may not match, update first
+  const firmwareNeedsUpdate = !!connectedDevice && firmwareOutdated === true;
+  // Lock plan editing (and saving) while checking / updating, or when outdated
+  const firmwareBusy = firmwareUpdating || firmwareCheckingBoard;
+  const editLocked = firmwareBusy || firmwareNeedsUpdate;
+  const editLockedLabel = firmwareUpdating
+    ? "Updating firmware…"
+    : firmwareCheckingBoard
+      ? "Checking firmware…"
+      : "Update firmware to edit";
 
   // Ask the board which firmware it runs whenever a device (re)connects
   const connectedDeviceId = connectedDevice?.id;
@@ -253,24 +266,28 @@ export default function HomeScreen() {
               <Button
                 size="lg"
                 onPress={() => setEditing(true)}
-                isDisabled={firmwareBusy}
+                isDisabled={editLocked}
                 className="flex-1 h-14 rounded-2xl bg-blue-600 shadow-sm data-[active=true]:bg-blue-500 data-[active=true]:text-white data-[disabled=true]:opacity-60"
               >
                 {firmwareBusy && <ButtonSpinner color="#fff" />}
                 <ButtonText className="font-bold text-white text-base  tracking-wide data-[active=true]:text-white">
-                  {firmwareBusy ? "Checking firmware…" : "✎ Edit plan"}
+                  {editLocked ? editLockedLabel : "✎ Edit plan"}
                 </ButtonText>
               </Button>
             ) : (
               <Button
                 size="lg"
                 onPress={handleSave}
-                isDisabled={saving}
+                isDisabled={saving || editLocked}
                 className={`flex-1 rounded-2xl bg-amber-300 h-14 shadow-sm active:bg-blue-500 text-black  data-[active=true]:bg-amber-200 data-[active=true]:text-white data-[disabled=true]:opacity-70`}
               >
                 {saving && <ButtonSpinner color="#000" />}
                 <ButtonText className="font-bold text-black text-base tracking-wide data-[active=true]:text-white">
-                  {saving ? "Sending to board…" : "✓ Save changes"}
+                  {saving
+                    ? "Sending to board…"
+                    : editLocked
+                      ? editLockedLabel
+                      : "✓ Save changes"}
                 </ButtonText>
               </Button>
             )}

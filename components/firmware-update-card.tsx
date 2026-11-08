@@ -104,17 +104,27 @@ export function FirmwareUpdateCard() {
             </Text>
           </Pressable>
         ) : (
+          // No NativeWind `active:` here: inside the Home ScrollView the
+          // re-render it triggers on press-in made Android drop the onPress,
+          // so OK could not dismiss the card. NativeWind also ignores a
+          // function `style`, so the pressed colour lives on an inner View.
           <Pressable
             onPress={status === "done" ? reset : confirmUpdate}
-            className="flex-1 bg-blue-600 active:bg-blue-700 rounded-xl py-3 items-center"
+            className="flex-1"
           >
-            <Text className="text-white text-sm font-bold uppercase tracking-wider">
-              {status === "done"
-                ? "OK"
-                : status === "error"
-                  ? "Retry update"
-                  : "Update firmware"}
-            </Text>
+            {({ pressed }) => (
+              <View
+                className={`${pressed ? "bg-blue-700" : "bg-blue-600"} rounded-xl py-3 items-center`}
+              >
+                <Text className="text-white text-sm font-bold uppercase tracking-wider">
+                  {status === "done"
+                    ? "OK"
+                    : status === "error"
+                      ? "Retry update"
+                      : "Update firmware"}
+                </Text>
+              </View>
+            )}
           </Pressable>
         )}
       </View>
