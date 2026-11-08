@@ -8,17 +8,20 @@ from ds1302 import DS1302
 from ble_server import BLEServer
 
 # ---------- CONFIG ----------
+# Build note: 2026-11-08 test OTA #3 (nút OK thẻ firmware ở Home)
 SETTING_TIME = "SETTING_TIME"
 SETTING_ALARM_TIME = "SETTING_ALARM_TIME"
 DEFAULT_TIMEZONE_OFFSET_MINUTES = 7 * 60  # Vietnam UTC+7
 MAX_BLE_BUFFER_SIZE = 4096
 STATE_FILE = "/pill_alert_state.json"
+OLED_Y_OFFSET = 4  # Biến toàn cục quy định tọa độ y bắt đầu cho OLED
 
 # Chân theo sơ đồ Pillbox_new (Pico W):
 # - OLED 1.3" SH1106: I2C1, SDA GP2, SCL GP3
 # - RTC DS1302 (3 dây): CE/RST GP10, I/O GP11, SCLK GP12
 # - Buzzer active 3V qua NPN S8050: GP15 (mức 1 = kêu)
-# - 6 LED slot thuốc (L1..L6): GP6, GP7, GP8, GP9, GP13, GP14
+# - 6 LED slot thuốc: slot1 GP6, slot2 GP9, slot3 GP14, slot4 GP13,
+#   slot5 GP8, slot6 GP7
 # Mạch không có LED trạng thái riêng -> dùng LED onboard của Pico W.
 OLED_I2C_ID = 1
 OLED_SDA_PIN = 2
@@ -29,8 +32,18 @@ DS1302_IO_PIN = 11
 DS1302_SCLK_PIN = 12
 
 LED_PIN = "LED"
-# 6 LED tương ứng 6 slot thuốc (drug_slots[0..5])
-PILL_SLOT_LED_PINS = (6, 7, 8, 9, 13, 14)
+
+# Định nghĩa các chân LED theo từng slot cụ thể
+LED1_slot1 = 6
+LED2_slot6 = 7
+LED3_slot5 = 8
+LED4_slot2 = 9
+LED5_slot4 = 13
+LED6_slot3 = 14
+
+# Sắp xếp lại danh sách theo đúng thứ tự từ slot 1 đến slot 6 để mapping chuẩn với drug_slots[0..5]
+PILL_SLOT_LED_PINS = (LED1_slot1, LED4_slot2, LED6_slot3, LED5_slot4, LED3_slot5, LED2_slot6)
+
 BUZZER_PIN = 15
 BUZZER_TOGGLE_INTERVAL_MS = 300
 DEFAULT_ALARM_DURATION_MS = 15_000  # 30 giây
@@ -205,8 +218,8 @@ BATTERY_ICON_INNER_W = BATTERY_ICON_BODY_W - 4
 BATTERY_ICON_INNER_H = BATTERY_ICON_H - 4
 BATTERY_ICON_STEP = BATTERY_ICON_BODY_W + BATTERY_ICON_NUB_W + BATTERY_ICON_GAP
 BATTERY_ROW_W = BATTERY_ICON_COUNT * BATTERY_ICON_STEP - BATTERY_ICON_GAP
-# Dòng chữ đầu tiên (y=0) dành cho header, nội dung bắt đầu từ dòng 2
-BATTERY_ROW_Y = 0
+# Dòng chữ đầu tiên (y=OLED_Y_OFFSET) dành cho header, nội dung bắt đầu từ dòng 2
+BATTERY_ROW_Y = OLED_Y_OFFSET
 
 
 def draw_battery_icon(x, y, fill_px):
@@ -263,11 +276,11 @@ def show_message(msg, show_battery=False):
 
     lines = msg.split("\n")
 
-    y = 0
+    y = OLED_Y_OFFSET
     max_lines = 6
     if show_battery:
         draw_header()
-        y = 10
+        y = OLED_Y_OFFSET + 10
         max_lines = 5
 
     for line in lines[:max_lines]:
